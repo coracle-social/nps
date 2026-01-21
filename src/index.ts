@@ -5,7 +5,7 @@ import {HTTPException} from "hono/http-exception"
 import {z} from "zod"
 import {serve} from "@hono/node-server"
 import {zValidator} from "@hono/zod-validator"
-import {verifyEvent} from "@welshman/util"
+import {verifyEvent, getPubkey} from "@welshman/util"
 import type {Subscription} from "./domain.js"
 import domain from "./domain.js"
 import database from "./database.js"
@@ -23,7 +23,7 @@ process.on("uncaughtException", (error: Error) => {
 
 if (!process.env.BASE_URL) throw new Error("BASE_URL is not defined.")
 
-const makeCallbackUrl = (sub: Subscription) => `${process.env.BASE_URL}/notify/${sub.id}`
+const makeCallbackUrl = (sub: Subscription) => `${process.env.BASE_URL}/notify/${sub.pk}`
 
 const app = new Hono()
 
@@ -44,13 +44,13 @@ const setupVapidSchema = z.object({
   auth: z.string(),
 })
 
-app.post("/setup/vapid", zValidator("json", setupVapidSchema), async c => {
+app.post("/subscription/vapid", zValidator("json", setupVapidSchema), async c => {
   const {pubkey, ...vapid} = c.req.valid("json")
   const subscription = domain.makeVapidSubscription(pubkey, vapid)
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
-  return c.json({id: sub.id, callback})
+  return c.json({sk: sub.sk, callback})
 })
 
 const setupApnsSchema = z.object({
@@ -59,13 +59,13 @@ const setupApnsSchema = z.object({
   topic: z.string(),
 })
 
-app.post("/setup/apns", zValidator("json", setupApnsSchema), async c => {
+app.post("/subscription/apns", zValidator("json", setupApnsSchema), async c => {
   const {pubkey, ...apns} = c.req.valid("json")
   const subscription = domain.makeAPNSSubscription(pubkey, apns)
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
-  return c.json({id: sub.id, callback})
+  return c.json({sk: sub.sk, callback})
 })
 
 const setupFcmSchema = z.object({
@@ -73,13 +73,21 @@ const setupFcmSchema = z.object({
   token: z.string(),
 })
 
-app.post("/setup/fcm", zValidator("json", setupFcmSchema), async c => {
+app.post("/subscription/fcm", zValidator("json", setupFcmSchema), async c => {
   const {pubkey, ...fcm} = c.req.valid("json")
   const subscription = domain.makeFCMSubscription(pubkey, fcm)
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
-  return c.json({id: sub.id, callback})
+  return c.json({sk: sub.sk, callback})
+})
+
+app.delete("/subscription/:sk", async c => {
+  const pk = getPubkey(c.req.param('sk'))
+
+  await database.deleteSubscription(pk)
+
+  return c.json({ok: true})
 })
 
 const notifySchema = z.object({
@@ -95,10 +103,10 @@ const notifySchema = z.object({
   }),
 })
 
-app.post("/notify/:id", zValidator("json", notifySchema), async c => {
-  const id = c.req.param("id")
+app.post("/notify/:pk", zValidator("json", notifySchema), async c => {
+  const pk = c.req.param("pk")
   const {relay, event} = c.req.valid("json")
-  const sub = await database.getSubscription(id)
+  const sub = await database.getSubscription(pk)
 
   if (!verifyEvent(event)) {
     throw new HTTPException(400, {message: "Invalid event"})

@@ -80,15 +80,15 @@ const sendVapidNotification = async (subscription: VapidSubscription, data: Noti
     await webpush.sendNotification(config, payload)
 
     if (subscription.errors > 0) {
-      await database.resetSubscriptionErrors(subscription.id)
+      await database.resetSubscriptionErrors(subscription.pk)
     }
   } catch (error: any) {
     if (error.statusCode === 410 || error.statusCode === 404) {
-      await database.deleteSubscription(subscription.id)
+      await database.deleteSubscription(subscription.pk)
     } else if (subscription.errors > 10) {
-      await database.deleteSubscription(subscription.id)
+      await database.deleteSubscription(subscription.pk)
     } else {
-      await database.incrementSubscriptionErrors(subscription.id)
+      await database.incrementSubscriptionErrors(subscription.pk)
     }
 
     console.log("Failed to send web push notification", error.message, error.statusCode)
@@ -116,24 +116,24 @@ const sendAPNSNotification = async (subscription: APNSSubscription, data: Notifi
     const failure = failed[0]
 
     if (subscription.errors > 10) {
-      await database.deleteSubscription(subscription.id)
+      await database.deleteSubscription(subscription.pk)
     } else if (failure.response) {
       const status = failure.status
       const reason = failure.response.reason
 
       if (status === '410' || reason === 'Unregistered' ||
           reason === 'BadDeviceToken' || reason === 'DeviceTokenNotForTopic') {
-        await database.deleteSubscription(subscription.id)
+        await database.deleteSubscription(subscription.pk)
       } else if (status === '429' || status === '500' || status === '503') {
-        await database.incrementSubscriptionErrors(subscription.id)
+        await database.incrementSubscriptionErrors(subscription.pk)
       }
     } else if (failure.error) {
-      await database.incrementSubscriptionErrors(subscription.id)
+      await database.incrementSubscriptionErrors(subscription.pk)
     }
 
     console.log("Failed to send apns push notification", failure.response?.reason)
   } else if (subscription.errors > 0) {
-    await database.resetSubscriptionErrors(subscription.id)
+    await database.resetSubscriptionErrors(subscription.pk)
   }
 }
 
@@ -155,15 +155,15 @@ const sendFCMNotification = async (subscription: FCMSubscription, data: Notifica
     })
 
     if (subscription.errors > 0) {
-      await database.resetSubscriptionErrors(subscription.id)
+      await database.resetSubscriptionErrors(subscription.pk)
     }
   } catch (error: any) {
     if (error.code === 'messaging/invalid-registration-token' ||
         error.code === 'messaging/registration-token-not-registered') {
-      await database.deleteSubscription(subscription.id)
+      await database.deleteSubscription(subscription.pk)
     } else if (error.code === 'messaging/server-unavailable' ||
              error.code === 'messaging/internal-error') {
-      await database.incrementSubscriptionErrors(subscription.id)
+      await database.incrementSubscriptionErrors(subscription.pk)
     }
 
     console.error('Failed to send fcm push notification', error.code, error.message)

@@ -1,4 +1,4 @@
-import {makeSecret} from '@welshman/util'
+import {makeSecret, getPubkey} from '@welshman/util'
 import type {SignedEvent} from '@welshman/util'
 
 export type NotificationData = {
@@ -28,7 +28,8 @@ export type FCMData = {
 }
 
 export type BaseSubscription = {
-  id: string
+  pk: string
+  sk: string
   pubkey: string
   errors: number
 }
@@ -50,29 +51,21 @@ export type FCMSubscription = BaseSubscription & {
 
 export type Subscription = VapidSubscription | APNSSubscription | FCMSubscription
 
-export const makeVapidSubscription = (pubkey: string, data: VapidData): VapidSubscription => ({
-  id: makeSecret(),
-  channel: Channel.Vapid,
-  errors: 0,
-  pubkey,
-  data,
-})
+const makeBaseSubscription = (pubkey: string): BaseSubscription => {
+  const sk = makeSecret()
+  const pk = getPubkey(sk)
 
-export const makeAPNSSubscription = (pubkey: string, data: APNSData): APNSSubscription => ({
-  id: makeSecret(),
-  channel: Channel.APNS,
-  errors: 0,
-  pubkey,
-  data,
-})
+  return {sk, pk, pubkey, errors: 0}
+}
 
-export const makeFCMSubscription = (pubkey: string, data: FCMData): FCMSubscription => ({
-  id: makeSecret(),
-  channel: Channel.FCM,
-  errors: 0,
-  pubkey,
-  data,
-})
+export const makeVapidSubscription = (pubkey: string, data: VapidData): VapidSubscription =>
+  ({...makeBaseSubscription(pubkey), channel: Channel.Vapid, data})
+
+export const makeAPNSSubscription = (pubkey: string, data: APNSData): APNSSubscription =>
+  ({...makeBaseSubscription(pubkey), channel: Channel.APNS, data})
+
+export const makeFCMSubscription = (pubkey: string, data: FCMData): FCMSubscription =>
+  ({...makeBaseSubscription(pubkey), channel: Channel.FCM, data})
 
 export default {
   makeVapidSubscription,
