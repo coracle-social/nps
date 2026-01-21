@@ -38,15 +38,14 @@ app.onError((err, c) => {
 })
 
 const setupVapidSchema = z.object({
-  pubkey: z.string(),
   endpoint: z.string(),
   p256dh: z.string(),
   auth: z.string(),
 })
 
 app.post("/subscription/vapid", zValidator("json", setupVapidSchema), async c => {
-  const {pubkey, ...vapid} = c.req.valid("json")
-  const subscription = domain.makeVapidSubscription(pubkey, vapid)
+  const vapid = c.req.valid("json")
+  const subscription = domain.makeVapidSubscription(vapid)
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
@@ -54,14 +53,13 @@ app.post("/subscription/vapid", zValidator("json", setupVapidSchema), async c =>
 })
 
 const setupApnsSchema = z.object({
-  pubkey: z.string(),
   token: z.string(),
   topic: z.string(),
 })
 
 app.post("/subscription/apns", zValidator("json", setupApnsSchema), async c => {
-  const {pubkey, ...apns} = c.req.valid("json")
-  const subscription = domain.makeAPNSSubscription(pubkey, apns)
+  const apns = c.req.valid("json")
+  const subscription = domain.makeAPNSSubscription(apns)
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
@@ -69,17 +67,23 @@ app.post("/subscription/apns", zValidator("json", setupApnsSchema), async c => {
 })
 
 const setupFcmSchema = z.object({
-  pubkey: z.string(),
   token: z.string(),
 })
 
 app.post("/subscription/fcm", zValidator("json", setupFcmSchema), async c => {
-  const {pubkey, ...fcm} = c.req.valid("json")
-  const subscription = domain.makeFCMSubscription(pubkey, fcm)
+  const fcm = c.req.valid("json")
+  const subscription = domain.makeFCMSubscription(fcm)
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
   return c.json({sk: sub.sk, callback})
+})
+
+app.get("/subscription/:sk", async c => {
+  const pk = getPubkey(c.req.param('sk'))
+  const subscription = await database.getSubscription(pk)
+
+  return c.json({exists: Boolean(subscription)})
 })
 
 app.delete("/subscription/:sk", async c => {

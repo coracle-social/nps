@@ -81,7 +81,6 @@ export const migrate = () =>
           CREATE TABLE IF NOT EXISTS subscription (
             pk TEXT PRIMARY KEY,
             sk TEXT NOT NULL,
-            pubkey TEXT NOT NULL,
             channel TEXT NOT NULL,
             errors number NOT NULL
             data JSON NOT NULL
@@ -99,7 +98,7 @@ export const migrate = () =>
 
 const parseSubscription = (row: any): Subscription | undefined => {
   if (row) {
-    const {pk, sk, pubkey, channel, errors} = row
+    const {pk, sk, channel, errors} = row
     const data = parseJson(row.data)
 
     if (!data) {
@@ -107,15 +106,15 @@ const parseSubscription = (row: any): Subscription | undefined => {
     }
 
     if (channel === Channel.Vapid) {
-      return {pk, sk, pubkey, channel, errors, data} as VapidSubscription
+      return {pk, sk, channel, errors, data} as VapidSubscription
     }
 
     if (channel === Channel.APNS) {
-      return {pk, sk, pubkey, channel, errors, data} as APNSSubscription
+      return {pk, sk, channel, errors, data} as APNSSubscription
     }
 
     if (channel === Channel.FCM) {
-      return {pk, sk, pubkey, channel, errors, data} as FCMSubscription
+      return {pk, sk, channel, errors, data} as FCMSubscription
     }
   }
 }
@@ -130,12 +129,11 @@ const insertSubscription = instrument(
     return assertResult(
       parseSubscription(
         await get(
-          `INSERT INTO subscriptions (pk, sk, pubkey, channel, errors, data)
+          `INSERT INTO subscriptions (pk, sk, channel, errors, data)
            VALUES (?, ?, ?, ?, ?) RETURNING *`,
           [
             subscription.pk,
             subscription.sk,
-            subscription.pubkey,
             subscription.channel,
             subscription.errors,
             JSON.stringify(subscription.data),
