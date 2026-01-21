@@ -5,6 +5,7 @@ import fcm from "firebase-admin"
 import {WRAP, SignedEvent} from "@welshman/util"
 import {parse, truncate, renderAsText} from "@welshman/content"
 import {NotificationData, Channel, VapidSubscription, APNSSubscription, FCMSubscription, Subscription} from "./domain.js"
+import database from './database.js'
 
 if (!process.env.VAPID_PRIVATE_KEY) throw new Error("VAPID_PRIVATE_KEY is not defined.")
 if (!process.env.VAPID_PUBLIC_KEY) throw new Error("VAPID_PUBLIC_KEY is not defined.")
@@ -60,7 +61,7 @@ const getNotificationBody = (event: SignedEvent) => {
 }
 
 const sendVapidNotification = async (subscription: VapidSubscription, data: NotificationData) => {
-  const sub = {
+  const config = {
     endpoint: subscription.data.endpoint,
     keys: {
       auth: subscription.data.auth,
@@ -75,7 +76,23 @@ const sendVapidNotification = async (subscription: VapidSubscription, data: Noti
     event: data.event,
   })
 
-  await webpush.sendNotification(sub, payload)
+  try {
+    await webpush.sendNotification(config, payload)
+
+    if (subscription.errors > 0) {
+      await database.resetSubscriptionErrors(subscription.id)
+    }
+  } catch (error: any) {
+    if (error.statusCode === 410 || error.statusCode === 404) {
+      await database.deleteSubscription(subscription.id)
+    } else if (subscription.errors > 10) {
+      await database.deleteSubscription(subscription.id)
+    } else {
+      await database.incrementSubscriptionErrors(subscription.id)
+    }
+
+    console.log("Failed to send web push notification", error.message, error.statusCode)
+  }
 }
 
 const sendAPNSNotification = async (subscription: APNSSubscription, data: NotificationData) => {
@@ -96,25 +113,61 @@ const sendAPNSNotification = async (subscription: APNSSubscription, data: Notifi
   const {failed} = await apnProvider.send(notification, subscription.data.token)
 
   if (failed.length > 0) {
-    throw new Error(failed[0].response?.reason)
+    const failure = failed[0]
+
+    if (subscription.errors > 10) {
+      await database.deleteSubscription(subscription.id)
+    } else if (failure.response) {
+      const status = failure.status
+      const reason = failure.response.reason
+
+      if (status === '410' || reason === 'Unregistered' ||
+          reason === 'BadDeviceToken' || reason === 'DeviceTokenNotForTopic') {
+        await database.deleteSubscription(subscription.id)
+      } else if (status === '429' || status === '500' || status === '503') {
+        await database.incrementSubscriptionErrors(subscription.id)
+      }
+    } else if (failure.error) {
+      await database.incrementSubscriptionErrors(subscription.id)
+    }
+
+    console.log("Failed to send apns push notification", failure.response?.reason)
+  } else if (subscription.errors > 0) {
+    await database.resetSubscriptionErrors(subscription.id)
   }
 }
 
 const sendFCMNotification = async (subscription: FCMSubscription, data: NotificationData) => {
-  await fcm.messaging().send({
-    token: subscription.data.token,
-    notification: {
-      title: "New activity",
-      body: getNotificationBody(data.event),
-    },
-    data: {
-      relay: data.relay,
-      event: JSON.stringify(data.event),
-    },
-    android: {
-      priority: "high" as const,
-    },
-  })
+  try {
+    await fcm.messaging().send({
+      token: subscription.data.token,
+      notification: {
+        title: "New activity",
+        body: getNotificationBody(data.event),
+      },
+      data: {
+        relay: data.relay,
+        event: JSON.stringify(data.event),
+      },
+      android: {
+        priority: "high" as const,
+      },
+    })
+
+    if (subscription.errors > 0) {
+      await database.resetSubscriptionErrors(subscription.id)
+    }
+  } catch (error: any) {
+    if (error.code === 'messaging/invalid-registration-token' ||
+        error.code === 'messaging/registration-token-not-registered') {
+      await database.deleteSubscription(subscription.id)
+    } else if (error.code === 'messaging/server-unavailable' ||
+             error.code === 'messaging/internal-error') {
+      await database.incrementSubscriptionErrors(subscription.id)
+    }
+
+    console.error('Failed to send fcm push notification', error.code, error.message)
+  }
 }
 
 export default {

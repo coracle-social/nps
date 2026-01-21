@@ -30,6 +30,7 @@ export type FCMData = {
 export type BaseSubscription = {
   id: string
   pubkey: string
+  errors: number
 }
 
 export type VapidSubscription = BaseSubscription & {
@@ -52,6 +53,7 @@ export type Subscription = VapidSubscription | APNSSubscription | FCMSubscriptio
 export const makeVapidSubscription = (pubkey: string, data: VapidData): VapidSubscription => ({
   id: makeSecret(),
   channel: Channel.Vapid,
+  errors: 0,
   pubkey,
   data,
 })
@@ -59,6 +61,7 @@ export const makeVapidSubscription = (pubkey: string, data: VapidData): VapidSub
 export const makeAPNSSubscription = (pubkey: string, data: APNSData): APNSSubscription => ({
   id: makeSecret(),
   channel: Channel.APNS,
+  errors: 0,
   pubkey,
   data,
 })
@@ -66,6 +69,7 @@ export const makeAPNSSubscription = (pubkey: string, data: APNSData): APNSSubscr
 export const makeFCMSubscription = (pubkey: string, data: FCMData): FCMSubscription => ({
   id: makeSecret(),
   channel: Channel.FCM,
+  errors: 0,
   pubkey,
   data,
 })

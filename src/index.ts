@@ -108,7 +108,9 @@ app.post("/notify/:id", zValidator("json", notifySchema), async c => {
     throw new HTTPException(404)
   }
 
-  notifications.send(sub, {relay, event})
+  await notifications.send(sub, {relay, event})
+
+  return c.json({ok: true})
 })
 
 const port = process.env.PORT || 3000
