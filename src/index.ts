@@ -1,6 +1,7 @@
 import "dotenv/config"
 
 import {Hono} from "hono"
+import {cors} from "hono/cors"
 import {HTTPException} from "hono/http-exception"
 import {z} from "zod"
 import {serve} from "@hono/node-server"
@@ -26,6 +27,13 @@ if (!process.env.BASE_URL) throw new Error("BASE_URL is not defined.")
 const makeCallbackUrl = (sub: Subscription) => `${process.env.BASE_URL}/notify/${sub.pk}`
 
 const app = new Hono()
+
+app.use(
+  "*",
+  cors({
+    origin: process.env.CORS_ORIGIN || "*",
+  }),
+)
 
 app.onError((err, c) => {
   if (err instanceof HTTPException) {
@@ -86,7 +94,7 @@ app.post("/subscription/fcm", zValidator("json", setupFcmSchema), async c => {
 })
 
 app.get("/subscription/:sk", async c => {
-  const pk = getPubkey(c.req.param('sk'))
+  const pk = getPubkey(c.req.param("sk"))
   const subscription = await database.getSubscription(pk)
 
   if (!subscription) {
@@ -101,7 +109,7 @@ app.get("/subscription/:sk", async c => {
 })
 
 app.delete("/subscription/:sk", async c => {
-  const pk = getPubkey(c.req.param('sk'))
+  const pk = getPubkey(c.req.param("sk"))
 
   const sub = await database.deleteSubscription(pk)
 

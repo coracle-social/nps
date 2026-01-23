@@ -120,7 +120,7 @@ export const parseSubscription = (row: any): Subscription | undefined => {
 }
 
 export const getSubscription = instrument("database.getSubscription", async (pk: string) => {
-  return parseSubscription(await get(`SELECCT * FROM subscription WHERE pk = ?`, [pk]))
+  return parseSubscription(await get(`SELECT * FROM subscription WHERE pk = ?`, [pk]))
 })
 
 export const insertSubscription = instrument(
