@@ -65,9 +65,3 @@ export const makeAPNSSubscription = (data: APNSData): APNSSubscription =>
 
 export const makeFCMSubscription = (data: FCMData): FCMSubscription =>
   ({...makeBaseSubscription(), channel: Channel.FCM, data})
-
-export default {
-  makeVapidSubscription,
-  makeAPNSSubscription,
-  makeFCMSubscription,
-}

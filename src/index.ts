@@ -7,9 +7,9 @@ import {serve} from "@hono/node-server"
 import {zValidator} from "@hono/zod-validator"
 import {verifyEvent, getPubkey} from "@welshman/util"
 import type {Subscription} from "./domain.js"
-import domain from "./domain.js"
-import database from "./database.js"
-import notifications from "./notifications.js"
+import * as domain from "./domain.js"
+import * as database from "./database.js"
+import * as notifications from "./notifications.js"
 
 process.on("unhandledRejection", (error: Error) => {
   console.error("Unhandled rejection:", error.stack)
@@ -49,6 +49,8 @@ app.post("/subscription/vapid", zValidator("json", setupVapidSchema), async c =>
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
+  console.log(`Created vapid callback ${callback}`)
+
   return c.json({sk: sub.sk, callback})
 })
 
@@ -63,6 +65,8 @@ app.post("/subscription/apns", zValidator("json", setupApnsSchema), async c => {
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
+  console.log(`Created apns callback ${callback}`)
+
   return c.json({sk: sub.sk, callback})
 })
 
@@ -76,6 +80,8 @@ app.post("/subscription/fcm", zValidator("json", setupFcmSchema), async c => {
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
+  console.log(`Created fcm callback ${callback}`)
+
   return c.json({sk: sub.sk, callback})
 })
 
@@ -83,13 +89,29 @@ app.get("/subscription/:sk", async c => {
   const pk = getPubkey(c.req.param('sk'))
   const subscription = await database.getSubscription(pk)
 
-  return c.json({exists: Boolean(subscription)})
+  if (!subscription) {
+    console.log(`Failed to fetch subscription ${pk}`)
+
+    throw new HTTPException(404)
+  }
+
+  console.log(`Successfully fetched subscription ${pk}`)
+
+  return c.json({callback: makeCallbackUrl(subscription)})
 })
 
 app.delete("/subscription/:sk", async c => {
   const pk = getPubkey(c.req.param('sk'))
 
-  await database.deleteSubscription(pk)
+  const sub = await database.deleteSubscription(pk)
+
+  if (!sub) {
+    console.log(`Failed to delete subscription ${pk}`)
+
+    throw new HTTPException(404)
+  }
+
+  console.log(`Successfully deleted subscription ${pk}`)
 
   return c.json({ok: true})
 })
@@ -113,23 +135,31 @@ app.post("/notify/:pk", zValidator("json", notifySchema), async c => {
   const sub = await database.getSubscription(pk)
 
   if (!verifyEvent(event)) {
+    console.log(`Invalid event received for subscription ${pk}`)
+
     throw new HTTPException(400, {message: "Invalid event"})
   }
 
   if (!sub) {
+    console.log(`Subscription ${pk} not found`)
+
     throw new HTTPException(404)
   }
 
   await notifications.send(sub, {relay, event})
+
+  console.log(`Send notification for subscription ${pk}`)
 
   return c.json({ok: true})
 })
 
 const port = process.env.PORT || 3000
 
-serve({
-  fetch: app.fetch,
-  port: Number(port),
-})
+database.migrate().then(() => {
+  serve({
+    fetch: app.fetch,
+    port: Number(port),
+  })
 
-console.log("Running on port", port)
+  console.log("Running on port", port)
+})

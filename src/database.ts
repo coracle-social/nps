@@ -82,13 +82,13 @@ export const migrate = () =>
             pk TEXT PRIMARY KEY,
             sk TEXT NOT NULL,
             channel TEXT NOT NULL,
-            errors number NOT NULL
+            errors number NOT NULL,
             data JSON NOT NULL
           )
         `,
         )
         resolve()
-      })
+        })
     } catch (err) {
       reject(err)
     }
@@ -96,7 +96,7 @@ export const migrate = () =>
 
 // Alerts
 
-const parseSubscription = (row: any): Subscription | undefined => {
+export const parseSubscription = (row: any): Subscription | undefined => {
   if (row) {
     const {pk, sk, channel, errors} = row
     const data = parseJson(row.data)
@@ -119,17 +119,17 @@ const parseSubscription = (row: any): Subscription | undefined => {
   }
 }
 
-const getSubscription = instrument("database.getSubscription", async (pk: string) => {
-  return parseSubscription(await get(`SELECCT * FROM subscriptions WHERE pk = ?`, [pk]))
+export const getSubscription = instrument("database.getSubscription", async (pk: string) => {
+  return parseSubscription(await get(`SELECCT * FROM subscription WHERE pk = ?`, [pk]))
 })
 
-const insertSubscription = instrument(
+export const insertSubscription = instrument(
   "database.insertSubscription",
   async (subscription: Subscription) => {
     return assertResult(
       parseSubscription(
         await get(
-          `INSERT INTO subscriptions (pk, sk, channel, errors, data)
+          `INSERT INTO subscription (pk, sk, channel, errors, data)
            VALUES (?, ?, ?, ?, ?) RETURNING *`,
           [
             subscription.pk,
@@ -144,34 +144,26 @@ const insertSubscription = instrument(
   },
 )
 
-const deleteSubscription = instrument("database.deleteSubscription", async (pk: string) => {
-  return parseSubscription(await get(`DELETE FROM subscriptions WHERE pk = ? RETURNING *`, [pk]))
+export const deleteSubscription = instrument("database.deleteSubscription", async (pk: string) => {
+  return parseSubscription(await get(`DELETE FROM subscription WHERE pk = ? RETURNING *`, [pk]))
 })
 
-const incrementSubscriptionErrors = instrument(
+export const incrementSubscriptionErrors = instrument(
   "database.incrementSubscriptionErrors",
   async (pk: string) => {
     return await get(
-      `UPDATE subscriptions SET errors = errors + 1 WHERE pk = ?`,
+      `UPDATE subscription SET errors = errors + 1 WHERE pk = ?`,
       [pk],
     )
   },
 )
 
-const resetSubscriptionErrors = instrument(
+export const resetSubscriptionErrors = instrument(
   "database.resetSubscriptionErrors",
   async (pk: string) => {
     return await get(
-      `UPDATE subscriptions SET errors = 0 WHERE pk = ?`,
+      `UPDATE subscription SET errors = 0 WHERE pk = ?`,
       [pk],
     )
   },
 )
-
-export default {
-  getSubscription,
-  insertSubscription,
-  deleteSubscription,
-  incrementSubscriptionErrors,
-  resetSubscriptionErrors,
-}

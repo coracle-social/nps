@@ -5,7 +5,7 @@ import fcm from "firebase-admin"
 import {WRAP, SignedEvent} from "@welshman/util"
 import {parse, truncate, renderAsText} from "@welshman/content"
 import {NotificationData, Channel, VapidSubscription, APNSSubscription, FCMSubscription, Subscription} from "./domain.js"
-import database from './database.js'
+import * as database from './database.js'
 
 if (!process.env.VAPID_PRIVATE_KEY) throw new Error("VAPID_PRIVATE_KEY is not defined.")
 if (!process.env.VAPID_PUBLIC_KEY) throw new Error("VAPID_PUBLIC_KEY is not defined.")
@@ -170,15 +170,13 @@ const sendFCMNotification = async (subscription: FCMSubscription, data: Notifica
   }
 }
 
-export default {
-  send: (subscription: Subscription, data: NotificationData) => {
-    switch (subscription.channel) {
-      case Channel.Vapid:
-        return sendVapidNotification(subscription, data)
-      case Channel.APNS:
-        return sendAPNSNotification(subscription, data)
-      case Channel.FCM:
-        return sendFCMNotification(subscription, data)
-    }
-  },
+export const send = (subscription: Subscription, data: NotificationData) => {
+  switch (subscription.channel) {
+    case Channel.Vapid:
+      return sendVapidNotification(subscription, data)
+    case Channel.APNS:
+      return sendAPNSNotification(subscription, data)
+    case Channel.FCM:
+      return sendFCMNotification(subscription, data)
+  }
 }
