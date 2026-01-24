@@ -24,7 +24,7 @@ process.on("uncaughtException", (error: Error) => {
 
 if (!process.env.BASE_URL) throw new Error("BASE_URL is not defined.")
 
-const makeCallbackUrl = (sub: Subscription) => `${process.env.BASE_URL}/notify/${sub.pk}`
+const makeCallbackUrl = (sub: Subscription) => `${process.env.BASE_URL}/notify/${sub.id}`
 
 const app = new Hono()
 
@@ -57,14 +57,11 @@ app.post("/subscription/vapid", zValidator("json", setupVapidSchema), async c =>
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
-  console.log(`Created vapid callback ${callback}`)
-
-  return c.json({sk: sub.sk, callback})
+  return c.json({key: sub.key, callback})
 })
 
 const setupApnsSchema = z.object({
   token: z.string(),
-  topic: z.string(),
 })
 
 app.post("/subscription/apns", zValidator("json", setupApnsSchema), async c => {
@@ -73,9 +70,7 @@ app.post("/subscription/apns", zValidator("json", setupApnsSchema), async c => {
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
-  console.log(`Created apns callback ${callback}`)
-
-  return c.json({sk: sub.sk, callback})
+  return c.json({key: sub.key, callback})
 })
 
 const setupFcmSchema = z.object({
@@ -88,38 +83,28 @@ app.post("/subscription/fcm", zValidator("json", setupFcmSchema), async c => {
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
-  console.log(`Created fcm callback ${callback}`)
-
-  return c.json({sk: sub.sk, callback})
+  return c.json({key: sub.key, callback})
 })
 
-app.get("/subscription/:sk", async c => {
-  const pk = getPubkey(c.req.param("sk"))
-  const subscription = await database.getSubscription(pk)
+app.get("/subscription/:key", async c => {
+  const key = c.req.param("key")
+  const subscription = await database.getSubscriptionByKey(key)
 
   if (!subscription) {
-    console.log(`Failed to fetch subscription ${pk}`)
-
     throw new HTTPException(404)
   }
-
-  console.log(`Successfully fetched subscription ${pk}`)
 
   return c.json({callback: makeCallbackUrl(subscription)})
 })
 
-app.delete("/subscription/:sk", async c => {
-  const pk = getPubkey(c.req.param("sk"))
+app.delete("/subscription/:key", async c => {
+  const key = getPubkey(c.req.param("key"))
 
-  const sub = await database.deleteSubscription(pk)
+  const sub = await database.deleteSubscription(key)
 
   if (!sub) {
-    console.log(`Failed to delete subscription ${pk}`)
-
     throw new HTTPException(404)
   }
-
-  console.log(`Successfully deleted subscription ${pk}`)
 
   return c.json({ok: true})
 })
@@ -137,26 +122,20 @@ const notifySchema = z.object({
   }),
 })
 
-app.post("/notify/:pk", zValidator("json", notifySchema), async c => {
-  const pk = c.req.param("pk")
+app.post("/notify/:id", zValidator("json", notifySchema), async c => {
+  const id = c.req.param("id")
   const {relay, event} = c.req.valid("json")
-  const sub = await database.getSubscription(pk)
+  const sub = await database.getSubscriptionById(id)
 
   if (!verifyEvent(event)) {
-    console.log(`Invalid event received for subscription ${pk}`)
-
     throw new HTTPException(400, {message: "Invalid event"})
   }
 
   if (!sub) {
-    console.log(`Subscription ${pk} not found`)
-
     throw new HTTPException(404)
   }
 
   await notifications.send(sub, {relay, event})
-
-  console.log(`Send notification for subscription ${pk}`)
 
   return c.json({ok: true})
 })

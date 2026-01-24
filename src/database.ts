@@ -79,8 +79,8 @@ export const migrate = () =>
         await run(
           `
           CREATE TABLE IF NOT EXISTS subscription (
-            pk TEXT PRIMARY KEY,
-            sk TEXT NOT NULL,
+            id TEXT PRIMARY KEY,
+            key TEXT NOT NULL,
             channel TEXT NOT NULL,
             errors number NOT NULL,
             data JSON NOT NULL
@@ -98,7 +98,7 @@ export const migrate = () =>
 
 export const parseSubscription = (row: any): Subscription | undefined => {
   if (row) {
-    const {pk, sk, channel, errors} = row
+    const {id, key, channel, errors} = row
     const data = parseJson(row.data)
 
     if (!data) {
@@ -106,22 +106,18 @@ export const parseSubscription = (row: any): Subscription | undefined => {
     }
 
     if (channel === Channel.Vapid) {
-      return {pk, sk, channel, errors, data} as VapidSubscription
+      return {id, key, channel, errors, data} as VapidSubscription
     }
 
     if (channel === Channel.APNS) {
-      return {pk, sk, channel, errors, data} as APNSSubscription
+      return {id, key, channel, errors, data} as APNSSubscription
     }
 
     if (channel === Channel.FCM) {
-      return {pk, sk, channel, errors, data} as FCMSubscription
+      return {id, key, channel, errors, data} as FCMSubscription
     }
   }
 }
-
-export const getSubscription = instrument("database.getSubscription", async (pk: string) => {
-  return parseSubscription(await get(`SELECT * FROM subscription WHERE pk = ?`, [pk]))
-})
 
 export const insertSubscription = instrument(
   "database.insertSubscription",
@@ -129,11 +125,11 @@ export const insertSubscription = instrument(
     return assertResult(
       parseSubscription(
         await get(
-          `INSERT INTO subscription (pk, sk, channel, errors, data)
+          `INSERT INTO subscription (id, key, channel, errors, data)
            VALUES (?, ?, ?, ?, ?) RETURNING *`,
           [
-            subscription.pk,
-            subscription.sk,
+            subscription.id,
+            subscription.key,
             subscription.channel,
             subscription.errors,
             JSON.stringify(subscription.data),
@@ -144,26 +140,35 @@ export const insertSubscription = instrument(
   },
 )
 
-export const deleteSubscription = instrument("database.deleteSubscription", async (pk: string) => {
-  return parseSubscription(await get(`DELETE FROM subscription WHERE pk = ? RETURNING *`, [pk]))
+export const getSubscriptionById = instrument("database.getSubscriptionById", async (id: string) => {
+  return parseSubscription(await get(`SELECT * FROM subscription WHERE id = ?`, [id]))
+})
+
+export const getSubscriptionByKey = instrument("database.getSubscriptionByKey", async (key: string) => {
+  return parseSubscription(await get(`SELECT * FROM subscription WHERE key = ?`, [key]))
+})
+
+
+export const deleteSubscription = instrument("database.deleteSubscription", async (key: string) => {
+  return parseSubscription(await get(`DELETE FROM subscription WHERE key = ? RETURNING *`, [key]))
 })
 
 export const incrementSubscriptionErrors = instrument(
   "database.incrementSubscriptionErrors",
-  async (pk: string) => {
+  async (key: string) => {
     return await get(
-      `UPDATE subscription SET errors = errors + 1 WHERE pk = ?`,
-      [pk],
+      `UPDATE subscription SET errors = errors + 1 WHERE key = ?`,
+      [key],
     )
   },
 )
 
 export const resetSubscriptionErrors = instrument(
   "database.resetSubscriptionErrors",
-  async (pk: string) => {
+  async (key: string) => {
     return await get(
-      `UPDATE subscription SET errors = 0 WHERE pk = ?`,
-      [pk],
+      `UPDATE subscription SET errors = 0 WHERE key = ?`,
+      [key],
     )
   },
 )

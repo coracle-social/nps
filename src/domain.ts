@@ -1,4 +1,4 @@
-import {makeSecret, getPubkey} from '@welshman/util'
+import {randomId} from '@welshman/lib'
 import type {SignedEvent} from '@welshman/util'
 
 export type NotificationData = {
@@ -19,7 +19,6 @@ export type VapidData = {
 }
 
 export type APNSData = {
-  topic: string
   token: string
 }
 
@@ -28,8 +27,8 @@ export type FCMData = {
 }
 
 export type BaseSubscription = {
-  pk: string
-  sk: string
+  id: string
+  key: string
   errors: number
 }
 
@@ -51,10 +50,10 @@ export type FCMSubscription = BaseSubscription & {
 export type Subscription = VapidSubscription | APNSSubscription | FCMSubscription
 
 const makeBaseSubscription = (): BaseSubscription => {
-  const sk = makeSecret()
-  const pk = getPubkey(sk)
+  const id = randomId()
+  const key = randomId()
 
-  return {sk, pk, errors: 0}
+  return {id, key, errors: 0}
 }
 
 export const makeVapidSubscription = (data: VapidData): VapidSubscription =>

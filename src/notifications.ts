@@ -80,15 +80,15 @@ const sendVapidNotification = async (subscription: VapidSubscription, data: Noti
     await webpush.sendNotification(config, payload)
 
     if (subscription.errors > 0) {
-      await database.resetSubscriptionErrors(subscription.pk)
+      await database.resetSubscriptionErrors(subscription.key)
     }
   } catch (error: any) {
     if (error.statusCode === 410 || error.statusCode === 404) {
-      await database.deleteSubscription(subscription.pk)
+      await database.deleteSubscription(subscription.key)
     } else if (subscription.errors > 10) {
-      await database.deleteSubscription(subscription.pk)
+      await database.deleteSubscription(subscription.key)
     } else {
-      await database.incrementSubscriptionErrors(subscription.pk)
+      await database.incrementSubscriptionErrors(subscription.key)
     }
 
     console.log("Failed to send web push notification", error.message, error.statusCode)
@@ -97,7 +97,7 @@ const sendVapidNotification = async (subscription: VapidSubscription, data: Noti
 
 const sendAPNSNotification = async (subscription: APNSSubscription, data: NotificationData) => {
   let notification = new apn.Notification({
-    topic: subscription.data.topic,
+    topic: process.env.APN_TOPIC,
     sound: "default",
     badge: 1,
     alert: {
@@ -116,24 +116,24 @@ const sendAPNSNotification = async (subscription: APNSSubscription, data: Notifi
     const failure = failed[0]
 
     if (subscription.errors > 10) {
-      await database.deleteSubscription(subscription.pk)
+      await database.deleteSubscription(subscription.key)
     } else if (failure.response) {
       const status = failure.status
       const reason = failure.response.reason
 
       if (status === '410' || reason === 'Unregistered' ||
           reason === 'BadDeviceToken' || reason === 'DeviceTokenNotForTopic') {
-        await database.deleteSubscription(subscription.pk)
+        await database.deleteSubscription(subscription.key)
       } else if (status === '429' || status === '500' || status === '503') {
-        await database.incrementSubscriptionErrors(subscription.pk)
+        await database.incrementSubscriptionErrors(subscription.key)
       }
     } else if (failure.error) {
-      await database.incrementSubscriptionErrors(subscription.pk)
+      await database.incrementSubscriptionErrors(subscription.key)
     }
 
     console.log("Failed to send apns push notification", failure.response?.reason)
   } else if (subscription.errors > 0) {
-    await database.resetSubscriptionErrors(subscription.pk)
+    await database.resetSubscriptionErrors(subscription.key)
   }
 }
 
@@ -155,15 +155,15 @@ const sendFCMNotification = async (subscription: FCMSubscription, data: Notifica
     })
 
     if (subscription.errors > 0) {
-      await database.resetSubscriptionErrors(subscription.pk)
+      await database.resetSubscriptionErrors(subscription.key)
     }
   } catch (error: any) {
     if (error.code === 'messaging/invalid-registration-token' ||
         error.code === 'messaging/registration-token-not-registered') {
-      await database.deleteSubscription(subscription.pk)
+      await database.deleteSubscription(subscription.key)
     } else if (error.code === 'messaging/server-unavailable' ||
              error.code === 'messaging/internal-error') {
-      await database.incrementSubscriptionErrors(subscription.pk)
+      await database.incrementSubscriptionErrors(subscription.key)
     }
 
     console.error('Failed to send fcm push notification', error.code, error.message)
