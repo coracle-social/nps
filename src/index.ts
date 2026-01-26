@@ -57,6 +57,8 @@ app.post("/subscription/vapid", zValidator("json", setupVapidSchema), async c =>
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
+  console.log(`Created vapid subscription ${sub.id}`)
+
   return c.json({key: sub.key, callback})
 })
 
@@ -69,6 +71,8 @@ app.post("/subscription/apns", zValidator("json", setupApnsSchema), async c => {
   const subscription = domain.makeAPNSSubscription(apns)
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
+
+  console.log(`Created apns subscription ${sub.id}`)
 
   return c.json({key: sub.key, callback})
 })
@@ -83,6 +87,8 @@ app.post("/subscription/fcm", zValidator("json", setupFcmSchema), async c => {
   const sub = await database.insertSubscription(subscription)
   const callback = makeCallbackUrl(sub)
 
+  console.log(`Created fcm subscription ${sub.id}`)
+
   return c.json({key: sub.key, callback})
 })
 
@@ -94,17 +100,19 @@ app.get("/subscription/:key", async c => {
     throw new HTTPException(404)
   }
 
+  console.log(`Fetched subscription ${subscription.id}`)
+
   return c.json({callback: makeCallbackUrl(subscription)})
 })
 
 app.delete("/subscription/:key", async c => {
-  const key = getPubkey(c.req.param("key"))
-
-  const sub = await database.deleteSubscription(key)
+  const sub = await database.deleteSubscription(c.req.param("key"))
 
   if (!sub) {
     throw new HTTPException(404)
   }
+
+  console.log(`Deleted subscription ${sub.id}`)
 
   return c.json({ok: true})
 })
@@ -134,6 +142,8 @@ app.post("/notify/:id", zValidator("json", notifySchema), async c => {
   if (!sub) {
     throw new HTTPException(404)
   }
+
+  console.log(`Processing notification for subscription ${sub.id}`)
 
   await notifications.send(sub, {relay, event})
 
