@@ -13,7 +13,9 @@ import {
 } from "@welshman/util"
 import {Channel, VapidSubscription, APNSSubscription, FCMSubscription, Subscription} from "./domain.js"
 
-const db = new sqlite3.Database("db")
+if (!process.env.DATA_DIR) throw new Error("DATA_DIR is not defined.")
+
+const db = new sqlite3.Database(process.env.DATA_DIR + "/db")
 
 type Param = number | string | boolean
 
