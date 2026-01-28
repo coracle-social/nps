@@ -6,6 +6,7 @@ import {HTTPException} from "hono/http-exception"
 import {z} from "zod"
 import {serve} from "@hono/node-server"
 import {zValidator} from "@hono/zod-validator"
+import {now, ms} from "@welshman/lib"
 import {verifyEvent, getPubkey} from "@welshman/util"
 import type {Subscription} from "./domain.js"
 import * as domain from "./domain.js"
@@ -130,22 +131,40 @@ const notifySchema = z.object({
   }),
 })
 
+const seen = new Map<string, number>()
+
+setTimeout(() => {
+  const since = now() - 300
+
+  for (const [k, t] of seen.entries()) {
+    if (t < since) {
+      seen.delete(k)
+    }
+  }
+}, ms(30))
+
 app.post("/notify/:id", zValidator("json", notifySchema), async c => {
   const id = c.req.param("id")
   const {relay, event} = c.req.valid("json")
-  const sub = await database.getSubscriptionById(id)
+  const key = `${id}:{event.id}`
 
-  if (!verifyEvent(event)) {
-    throw new HTTPException(400, {message: "Invalid event"})
+  if (!seen.has(key)) {
+    seen.set(key, now())
+
+    const sub = await database.getSubscriptionById(id)
+
+    if (!verifyEvent(event)) {
+      throw new HTTPException(400, {message: "Invalid event"})
+    }
+
+    if (!sub) {
+      throw new HTTPException(404)
+    }
+
+    console.log(`Processing notification for subscription ${sub.id}`)
+
+    await notifications.send(sub, {relay, event})
   }
-
-  if (!sub) {
-    throw new HTTPException(404)
-  }
-
-  console.log(`Processing notification for subscription ${sub.id}`)
-
-  await notifications.send(sub, {relay, event})
 
   return c.json({ok: true})
 })
