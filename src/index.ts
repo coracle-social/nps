@@ -137,20 +137,20 @@ setTimeout(() => {
 }, ms(30))
 
 app.post("/notify/:id", zValidator("json", notifySchema), async c => {
-  const subscriptionId = c.req.param("id")
+  const subid = c.req.param("id")
   const {id, relay, pubkey, payload} = c.req.valid("json")
-  const key = `${subscriptionId}:${id}`
+  const key = `${subid}:${id}`
 
   if (!seen.has(key)) {
     seen.set(key, now())
 
-    const sub = await database.getSubscriptionById(id)
+    const sub = await database.getSubscriptionById(subid)
 
     if (!sub) {
       throw new HTTPException(404)
     }
 
-    console.log(`Processing notification for subscription ${sub.id}`)
+    console.log(`Processing notification for subscription ${subid}`)
 
     await notifications.send(sub, {id, relay, pubkey, payload})
   }

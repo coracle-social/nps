@@ -44,7 +44,6 @@ const sendVapidNotification = async (subscription: VapidSubscription, data: Noti
 
   const payload = JSON.stringify({
     title: "New activity",
-    // body: "New activity",
     ...data
   })
 
@@ -74,7 +73,6 @@ const sendAPNSNotification = async (subscription: APNSSubscription, data: Notifi
     badge: 1,
     alert: {
       title: "New activity",
-      // body: getNotificationBody(data.event),
     },
     payload: data,
   })
@@ -112,7 +110,6 @@ const sendFCMNotification = async (subscription: FCMSubscription, data: Notifica
       token: subscription.data.token,
       notification: {
         title: "New activity",
-        // body: getNotificationBody(data.event),
       },
       data,
       android: {
