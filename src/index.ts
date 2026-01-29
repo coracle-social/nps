@@ -139,7 +139,7 @@ setTimeout(() => {
 app.post("/notify/:id", zValidator("json", notifySchema), async c => {
   const subscriptionId = c.req.param("id")
   const {id, relay, pubkey, payload} = c.req.valid("json")
-  const key = `${subscriptionId}:{id}`
+  const key = `${subscriptionId}:${id}`
 
   if (!seen.has(key)) {
     seen.set(key, now())
