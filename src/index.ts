@@ -120,6 +120,7 @@ app.delete("/subscription/:key", async c => {
 const notifySchema = z.object({
   id: z.string(),
   relay: z.string(),
+  pubkey: z.string(),
   payload: z.string(),
 })
 
@@ -137,7 +138,7 @@ setTimeout(() => {
 
 app.post("/notify/:id", zValidator("json", notifySchema), async c => {
   const subscriptionId = c.req.param("id")
-  const {id, relay, payload} = c.req.valid("json")
+  const {id, relay, pubkey, payload} = c.req.valid("json")
   const key = `${subscriptionId}:{id}`
 
   if (!seen.has(key)) {
@@ -151,7 +152,7 @@ app.post("/notify/:id", zValidator("json", notifySchema), async c => {
 
     console.log(`Processing notification for subscription ${sub.id}`)
 
-    await notifications.send(sub, {id, relay, payload})
+    await notifications.send(sub, {id, relay, pubkey, payload})
   }
 
   return c.json({ok: true})
