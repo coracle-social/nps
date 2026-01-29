@@ -1,9 +1,9 @@
 import {randomId} from '@welshman/lib'
-import type {SignedEvent} from '@welshman/util'
 
 export type NotificationData = {
+  id: string
   relay: string
-  event: SignedEvent
+  payload: string
 }
 
 export enum Channel {

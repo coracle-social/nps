@@ -2,8 +2,6 @@ import "dotenv/config"
 import apn from "apn"
 import webpush from "web-push"
 import fcm from "firebase-admin"
-import {WRAP, SignedEvent} from "@welshman/util"
-import {parse, truncate, renderAsText} from "@welshman/content"
 import {NotificationData, Channel, VapidSubscription, APNSSubscription, FCMSubscription, Subscription} from "./domain.js"
 import * as database from './database.js'
 
@@ -35,31 +33,6 @@ const apnProvider = new apn.Provider({
   },
 })
 
-const getNotificationBody = (event: SignedEvent) => {
-  if (event.kind === WRAP) {
-    return ""
-  }
-
-  const parsed = truncate(parse(event), {
-    minLength: 50,
-    maxLength: 200,
-  })
-
-  const renderer = renderAsText(parsed, {
-    createElement: tag => ({
-      _text: "",
-      set innerText(text: string) {
-        this._text = text
-      },
-      get innerHTML() {
-        return this._text
-      },
-    }),
-  })
-
-  return renderer.toString()
-}
-
 const sendVapidNotification = async (subscription: VapidSubscription, data: NotificationData) => {
   const config = {
     endpoint: subscription.data.endpoint,
@@ -71,9 +44,8 @@ const sendVapidNotification = async (subscription: VapidSubscription, data: Noti
 
   const payload = JSON.stringify({
     title: "New activity",
-    body: getNotificationBody(data.event),
-    relay: data.relay,
-    event: data.event,
+    // body: "New activity",
+    ...data
   })
 
   try {
@@ -102,12 +74,9 @@ const sendAPNSNotification = async (subscription: APNSSubscription, data: Notifi
     badge: 1,
     alert: {
       title: "New activity",
-      body: getNotificationBody(data.event),
+      // body: getNotificationBody(data.event),
     },
-    payload: {
-      relay: data.relay,
-      event: JSON.stringify(data.event),
-    },
+    payload: data,
   })
 
   const {failed} = await apnProvider.send(notification, subscription.data.token)
@@ -143,12 +112,9 @@ const sendFCMNotification = async (subscription: FCMSubscription, data: Notifica
       token: subscription.data.token,
       notification: {
         title: "New activity",
-        body: getNotificationBody(data.event),
+        // body: getNotificationBody(data.event),
       },
-      data: {
-        relay: data.relay,
-        event: JSON.stringify(data.event),
-      },
+      data,
       android: {
         priority: "high" as const,
       },

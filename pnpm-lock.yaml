@@ -17,9 +17,6 @@ importers:
       '@types/web-push':
         specifier: ^3.6.4
         version: 3.6.4
-      '@welshman/content':
-        specifier: ^0.8.1
-        version: 0.8.1(nostr-tools@2.19.4(typescript@5.9.3))
       '@welshman/lib':
         specifier: ^0.8.1
         version: 0.8.1
@@ -80,9 +77,6 @@ importers:
         version: 5.9.3
 
 packages:
-
-  '@braintree/sanitize-url@7.1.1':
-    resolution: {integrity: sha512-i1L7noDNxtFyL5DmZafWy1wRVhGehQmzZaz1HiN5e7iylJMSZR7ekOV7NsIqa5qBldlLrsKv4HbgFUVlQrz8Mw==}
 
   '@esbuild/aix-ppc64@0.27.2':
     resolution: {integrity: sha512-GZMB+a0mOMZs4MpDbj8RJp4cw+w1WV5NYD6xzgvzUJ5Ek2jerwfO2eADyI6ExDSUED+1X8aMbegahsJi+8mgpw==}
@@ -557,11 +551,6 @@ packages:
   '@typescript-eslint/visitor-keys@8.53.1':
     resolution: {integrity: sha512-oy+wV7xDKFPRyNggmXuZQSBzvoLnpmJs+GhzRhPjrxl2b/jIlyjVokzm47CZCDUdXKr2zd7ZLodPfOBpOPyPlg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
-  '@welshman/content@0.8.1':
-    resolution: {integrity: sha512-DQ08ijfQQojNKWj/LRzcry6IqA45s+xpg25sc2zxP6iXE4Q0cidSoVwvJjPa2PjYWsInC6Zmj/ZQOErWtsyBjQ==}
-    peerDependencies:
-      nostr-tools: ^2.19.4
 
   '@welshman/lib@0.8.1':
     resolution: {integrity: sha512-s4gRg4NXwDPiXgZVuAaZKS+rpnfYcFfqTqvw44hBTIWa1o12J4k7bqP7Oyi3r6Q901lW/6tvP7TInBWkdhm5Bw==}
@@ -1768,8 +1757,6 @@ packages:
 
 snapshots:
 
-  '@braintree/sanitize-url@7.1.1': {}
-
   '@esbuild/aix-ppc64@0.27.2':
     optional: true
 
@@ -2252,11 +2239,6 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.53.1
       eslint-visitor-keys: 4.2.1
-
-  '@welshman/content@0.8.1(nostr-tools@2.19.4(typescript@5.9.3))':
-    dependencies:
-      '@braintree/sanitize-url': 7.1.1
-      nostr-tools: 2.19.4(typescript@5.9.3)
 
   '@welshman/lib@0.8.1':
     dependencies:
