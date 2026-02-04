@@ -145,8 +145,6 @@ app.post("/notify/:id", zValidator("json", notifySchema), async c => {
     const sub = await database.getSubscriptionById(subid)
 
     if (!sub) {
-      console.log(`Subscription ${subid} not found`)
-
       throw new HTTPException(404)
     }
 

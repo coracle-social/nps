@@ -49,10 +49,7 @@ const sendVapidNotification = async (subscription: VapidSubscription, data: Noti
     },
   }
 
-  const payload = JSON.stringify({
-    title: "New activity",
-    id: data.id,
-  })
+  const payload = JSON.stringify({title: "New activity", ...data})
 
   try {
     await webpush.sendNotification(config, payload)
@@ -81,9 +78,7 @@ const sendAPNSNotification = async (subscription: APNSSubscription, data: Notifi
     alert: {
       title: "New activity",
     },
-    payload: {
-      id: data.id,
-    },
+    payload: data,
   })
 
   const {failed} = await apnProvider.send(notification, subscription.data.token)
@@ -124,9 +119,7 @@ const sendFCMNotification = async (subscription: FCMSubscription, data: Notifica
       notification: {
         title: "New activity",
       },
-      data: {
-        id: data.id,
-      },
+      data,
       android: {
         priority: "high" as const,
       },
