@@ -1,9 +1,8 @@
-import {randomId} from '@welshman/lib'
+import {randomId} from "@welshman/lib"
 
 export type NotificationData = {
   id: string
   relay: string
-  payload: string
 }
 
 export enum Channel {
@@ -56,11 +55,20 @@ const makeBaseSubscription = (): BaseSubscription => {
   return {id, key, errors: 0}
 }
 
-export const makeVapidSubscription = (data: VapidData): VapidSubscription =>
-  ({...makeBaseSubscription(), channel: Channel.Vapid, data})
+export const makeVapidSubscription = (data: VapidData): VapidSubscription => ({
+  ...makeBaseSubscription(),
+  channel: Channel.Vapid,
+  data,
+})
 
-export const makeAPNSSubscription = (data: APNSData): APNSSubscription =>
-  ({...makeBaseSubscription(), channel: Channel.APNS, data})
+export const makeAPNSSubscription = (data: APNSData): APNSSubscription => ({
+  ...makeBaseSubscription(),
+  channel: Channel.APNS,
+  data,
+})
 
-export const makeFCMSubscription = (data: FCMData): FCMSubscription =>
-  ({...makeBaseSubscription(), channel: Channel.FCM, data})
+export const makeFCMSubscription = (data: FCMData): FCMSubscription => ({
+  ...makeBaseSubscription(),
+  channel: Channel.FCM,
+  data,
+})

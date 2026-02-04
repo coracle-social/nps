@@ -2,8 +2,15 @@ import "dotenv/config"
 import apn from "apn"
 import webpush from "web-push"
 import fcm from "firebase-admin"
-import {NotificationData, Channel, VapidSubscription, APNSSubscription, FCMSubscription, Subscription} from "./domain.js"
-import * as database from './database.js'
+import {
+  NotificationData,
+  Channel,
+  VapidSubscription,
+  APNSSubscription,
+  FCMSubscription,
+  Subscription,
+} from "./domain.js"
+import * as database from "./database.js"
 
 if (!process.env.VAPID_PRIVATE_KEY) throw new Error("VAPID_PRIVATE_KEY is not defined.")
 if (!process.env.VAPID_PUBLIC_KEY) throw new Error("VAPID_PUBLIC_KEY is not defined.")
@@ -44,7 +51,7 @@ const sendVapidNotification = async (subscription: VapidSubscription, data: Noti
 
   const payload = JSON.stringify({
     title: "New activity",
-    ...data
+    id: data.id,
   })
 
   try {
@@ -74,7 +81,9 @@ const sendAPNSNotification = async (subscription: APNSSubscription, data: Notifi
     alert: {
       title: "New activity",
     },
-    payload: data,
+    payload: {
+      id: data.id,
+    },
   })
 
   const {failed} = await apnProvider.send(notification, subscription.data.token)
@@ -88,10 +97,14 @@ const sendAPNSNotification = async (subscription: APNSSubscription, data: Notifi
       const status = failure.status
       const reason = failure.response.reason
 
-      if (status === '410' || reason === 'Unregistered' ||
-          reason === 'BadDeviceToken' || reason === 'DeviceTokenNotForTopic') {
+      if (
+        status === "410" ||
+        reason === "Unregistered" ||
+        reason === "BadDeviceToken" ||
+        reason === "DeviceTokenNotForTopic"
+      ) {
         await database.deleteSubscription(subscription.key)
-      } else if (status === '429' || status === '500' || status === '503') {
+      } else if (status === "429" || status === "500" || status === "503") {
         await database.incrementSubscriptionErrors(subscription.key)
       }
     } else if (failure.error) {
@@ -111,7 +124,9 @@ const sendFCMNotification = async (subscription: FCMSubscription, data: Notifica
       notification: {
         title: "New activity",
       },
-      data,
+      data: {
+        id: data.id,
+      },
       android: {
         priority: "high" as const,
       },
@@ -121,15 +136,19 @@ const sendFCMNotification = async (subscription: FCMSubscription, data: Notifica
       await database.resetSubscriptionErrors(subscription.key)
     }
   } catch (error: any) {
-    if (error.code === 'messaging/invalid-registration-token' ||
-        error.code === 'messaging/registration-token-not-registered') {
+    if (
+      error.code === "messaging/invalid-registration-token" ||
+      error.code === "messaging/registration-token-not-registered"
+    ) {
       await database.deleteSubscription(subscription.key)
-    } else if (error.code === 'messaging/server-unavailable' ||
-             error.code === 'messaging/internal-error') {
+    } else if (
+      error.code === "messaging/server-unavailable" ||
+      error.code === "messaging/internal-error"
+    ) {
       await database.incrementSubscriptionErrors(subscription.key)
     }
 
-    console.error('Failed to send fcm push notification', error.code, error.message)
+    console.error("Failed to send fcm push notification", error.code, error.message)
   }
 }
 

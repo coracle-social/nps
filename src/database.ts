@@ -11,7 +11,13 @@ import {
   getAddress,
   makeSecret,
 } from "@welshman/util"
-import {Channel, VapidSubscription, APNSSubscription, FCMSubscription, Subscription} from "./domain.js"
+import {
+  Channel,
+  VapidSubscription,
+  APNSSubscription,
+  FCMSubscription,
+  Subscription,
+} from "./domain.js"
 
 if (!process.env.DATA_DIR) throw new Error("DATA_DIR is not defined.")
 
@@ -90,7 +96,7 @@ export const migrate = () =>
         `,
         )
         resolve()
-        })
+      })
     } catch (err) {
       reject(err)
     }
@@ -142,14 +148,19 @@ export const insertSubscription = instrument(
   },
 )
 
-export const getSubscriptionById = instrument("database.getSubscriptionById", async (id: string) => {
-  return parseSubscription(await get(`SELECT * FROM subscription WHERE id = ?`, [id]))
-})
+export const getSubscriptionById = instrument(
+  "database.getSubscriptionById",
+  async (id: string) => {
+    return parseSubscription(await get(`SELECT * FROM subscription WHERE id = ?`, [id]))
+  },
+)
 
-export const getSubscriptionByKey = instrument("database.getSubscriptionByKey", async (key: string) => {
-  return parseSubscription(await get(`SELECT * FROM subscription WHERE key = ?`, [key]))
-})
-
+export const getSubscriptionByKey = instrument(
+  "database.getSubscriptionByKey",
+  async (key: string) => {
+    return parseSubscription(await get(`SELECT * FROM subscription WHERE key = ?`, [key]))
+  },
+)
 
 export const deleteSubscription = instrument("database.deleteSubscription", async (key: string) => {
   return parseSubscription(await get(`DELETE FROM subscription WHERE key = ? RETURNING *`, [key]))
@@ -158,19 +169,13 @@ export const deleteSubscription = instrument("database.deleteSubscription", asyn
 export const incrementSubscriptionErrors = instrument(
   "database.incrementSubscriptionErrors",
   async (key: string) => {
-    return await get(
-      `UPDATE subscription SET errors = errors + 1 WHERE key = ?`,
-      [key],
-    )
+    return await get(`UPDATE subscription SET errors = errors + 1 WHERE key = ?`, [key])
   },
 )
 
 export const resetSubscriptionErrors = instrument(
   "database.resetSubscriptionErrors",
   async (key: string) => {
-    return await get(
-      `UPDATE subscription SET errors = 0 WHERE key = ?`,
-      [key],
-    )
+    return await get(`UPDATE subscription SET errors = 0 WHERE key = ?`, [key])
   },
 )
