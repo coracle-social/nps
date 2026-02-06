@@ -129,7 +129,9 @@ const sendFCMNotification = async (subscription: FCMSubscription, data: Notifica
       data,
       android: {
         priority: "high" as const,
-        collapseKey: subscription.id,
+        notification: {
+          tag: subscription.id,
+        },
       },
     })
 
