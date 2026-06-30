@@ -1,2 +1,6 @@
-onlyBuiltDependencies:
-  - sqlite3
+blockExoticSubdeps: false
+allowBuilds:
+  '@firebase/util': false
+  esbuild: false
+  protobufjs: false
+  sqlite3: true
