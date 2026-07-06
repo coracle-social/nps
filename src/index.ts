@@ -124,7 +124,7 @@ const notifySchema = z.object({
 
 const seen = new Map<string, number>()
 
-setTimeout(() => {
+setInterval(() => {
   const since = now() - 300
 
   for (const [k, t] of seen.entries()) {
