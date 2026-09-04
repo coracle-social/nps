@@ -3,7 +3,13 @@ import {randomId} from "@welshman/lib"
 export type NotificationData = {
   id: string
   relay: string
+  event?: string
 }
+
+const MAX_EVENT_BYTES = 3800
+
+export const makeNotificationData = ({id, relay, event}: NotificationData): NotificationData =>
+  event && Buffer.byteLength(event) <= MAX_EVENT_BYTES ? {id, relay, event} : {id, relay}
 
 export enum Channel {
   Vapid = "vapid",

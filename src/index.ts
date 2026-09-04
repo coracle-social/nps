@@ -117,9 +117,20 @@ app.delete("/subscription/:key", async c => {
   return c.json({ok: true})
 })
 
+const eventSchema = z.object({
+  id: z.string(),
+  pubkey: z.string(),
+  created_at: z.number(),
+  kind: z.number(),
+  tags: z.array(z.array(z.string())),
+  content: z.string(),
+  sig: z.string(),
+})
+
 const notifySchema = z.object({
   id: z.string(),
   relay: z.string(),
+  event: eventSchema.optional(),
 })
 
 const seen = new Map<string, number>()
@@ -136,7 +147,7 @@ setInterval(() => {
 
 app.post("/notify/:id", zValidator("json", notifySchema), async c => {
   const subid = c.req.param("id")
-  const {id, relay} = c.req.valid("json")
+  const {id, relay, event} = c.req.valid("json")
   const key = `${subid}:${id}`
 
   if (!seen.has(key)) {
@@ -150,7 +161,9 @@ app.post("/notify/:id", zValidator("json", notifySchema), async c => {
 
     console.log(`Processing notification for subscription ${subid}`)
 
-    await notifications.send(sub, {id, relay})
+    const json = event && JSON.stringify(event)
+
+    await notifications.send(sub, domain.makeNotificationData({id, relay, event: json}))
   }
 
   return c.json({ok: true})
