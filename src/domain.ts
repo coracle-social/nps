@@ -1,4 +1,16 @@
-import {randomId} from "@welshman/lib"
+import {ellipsize, randomId} from "@welshman/lib"
+import {WRAP} from "@welshman/util"
+import {renderEventAsSummary} from "./render.js"
+
+export type NotificationEvent = {
+  id: string
+  pubkey: string
+  created_at: number
+  kind: number
+  tags: string[][]
+  content: string
+  sig: string
+}
 
 export type NotificationData = {
   id: string
@@ -8,8 +20,16 @@ export type NotificationData = {
 
 const MAX_EVENT_BYTES = 3800
 
+const PREVIEW_LENGTH = 120
+
 export const makeNotificationData = ({id, relay, event}: NotificationData): NotificationData =>
   event && Buffer.byteLength(event) <= MAX_EVENT_BYTES ? {id, relay, event} : {id, relay}
+
+export const makeNotificationBody = (event?: NotificationEvent) => {
+  const summary = event && event.kind !== WRAP ? renderEventAsSummary(event) : ""
+
+  return summary ? ellipsize(summary, PREVIEW_LENGTH, "…") : undefined
+}
 
 export enum Channel {
   Vapid = "vapid",

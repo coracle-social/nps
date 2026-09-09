@@ -162,8 +162,9 @@ app.post("/notify/:id", zValidator("json", notifySchema), async c => {
     console.log(`Processing notification for subscription ${subid}`)
 
     const json = event && JSON.stringify(event)
+    const body = domain.makeNotificationBody(event)
 
-    await notifications.send(sub, domain.makeNotificationData({id, relay, event: json}))
+    await notifications.send(sub, domain.makeNotificationData({id, relay, event: json}), body)
   }
 
   return c.json({ok: true})

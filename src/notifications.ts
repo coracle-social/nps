@@ -40,7 +40,11 @@ const apnProvider = new apn.Provider({
   },
 })
 
-const sendVapidNotification = async (subscription: VapidSubscription, data: NotificationData) => {
+const sendVapidNotification = async (
+  subscription: VapidSubscription,
+  data: NotificationData,
+  body?: string,
+) => {
   const config = {
     endpoint: subscription.data.endpoint,
     keys: {
@@ -49,7 +53,7 @@ const sendVapidNotification = async (subscription: VapidSubscription, data: Noti
     },
   }
 
-  const payload = JSON.stringify({title: "New activity", ...data})
+  const payload = JSON.stringify({title: "New activity", body, ...data})
 
   const options = {
     headers: {
@@ -76,13 +80,18 @@ const sendVapidNotification = async (subscription: VapidSubscription, data: Noti
   }
 }
 
-const sendAPNSNotification = async (subscription: APNSSubscription, data: NotificationData) => {
+const sendAPNSNotification = async (
+  subscription: APNSSubscription,
+  data: NotificationData,
+  body?: string,
+) => {
   let notification = new apn.Notification({
     topic: process.env.APN_TOPIC,
     sound: "default",
     badge: 1,
     alert: {
       title: "New activity",
+      body,
     },
     payload: data,
     collapseId: subscription.id,
@@ -119,12 +128,17 @@ const sendAPNSNotification = async (subscription: APNSSubscription, data: Notifi
   }
 }
 
-const sendFCMNotification = async (subscription: FCMSubscription, data: NotificationData) => {
+const sendFCMNotification = async (
+  subscription: FCMSubscription,
+  data: NotificationData,
+  body?: string,
+) => {
   try {
     await fcm.messaging().send({
       token: subscription.data.token,
       notification: {
         title: "New activity",
+        body,
       },
       data,
       android: {
@@ -155,13 +169,13 @@ const sendFCMNotification = async (subscription: FCMSubscription, data: Notifica
   }
 }
 
-export const send = (subscription: Subscription, data: NotificationData) => {
+export const send = (subscription: Subscription, data: NotificationData, body?: string) => {
   switch (subscription.channel) {
     case Channel.Vapid:
-      return sendVapidNotification(subscription, data)
+      return sendVapidNotification(subscription, data, body)
     case Channel.APNS:
-      return sendAPNSNotification(subscription, data)
+      return sendAPNSNotification(subscription, data, body)
     case Channel.FCM:
-      return sendFCMNotification(subscription, data)
+      return sendFCMNotification(subscription, data, body)
   }
 }
