@@ -17,7 +17,7 @@ const makeEvent = (contentBytes: number) =>
 
 const small = makeEvent(100)
 const large = makeEvent(4000)
-const multibyte = makeEvent(0).replace('"content":""', `"content":"${"Ž".repeat(1950)}"`)
+const multibyte = makeEvent(0).replace('"content":""', `"content":"${"Ã©".repeat(1950)}"`)
 
 assert.deepEqual(makeNotificationData({id, relay}), {id, relay})
 
