@@ -4,3 +4,5 @@ allowBuilds:
   esbuild: false
   protobufjs: false
   sqlite3: true
+minimumReleaseAgeExclude:
+  - '@welshman/content@0.10.5'
