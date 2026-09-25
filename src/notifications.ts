@@ -3,6 +3,7 @@ import apn from "apn"
 import webpush from "web-push"
 import fcm from "firebase-admin"
 import {
+  NotificationContent,
   NotificationData,
   Channel,
   VapidSubscription,
@@ -43,7 +44,7 @@ const apnProvider = new apn.Provider({
 const sendVapidNotification = async (
   subscription: VapidSubscription,
   data: NotificationData,
-  body?: string,
+  {title, body}: NotificationContent,
 ) => {
   const config = {
     endpoint: subscription.data.endpoint,
@@ -53,7 +54,7 @@ const sendVapidNotification = async (
     },
   }
 
-  const payload = JSON.stringify({title: "New activity", body, ...data})
+  const payload = JSON.stringify({title, body, ...data})
 
   const options = {
     headers: {
@@ -83,14 +84,14 @@ const sendVapidNotification = async (
 const sendAPNSNotification = async (
   subscription: APNSSubscription,
   data: NotificationData,
-  body?: string,
+  {title, body}: NotificationContent,
 ) => {
   let notification = new apn.Notification({
     topic: process.env.APN_TOPIC,
     sound: "default",
     badge: 1,
     alert: {
-      title: "New activity",
+      title,
       body,
     },
     payload: data,
@@ -131,13 +132,13 @@ const sendAPNSNotification = async (
 const sendFCMNotification = async (
   subscription: FCMSubscription,
   data: NotificationData,
-  body?: string,
+  {title, body}: NotificationContent,
 ) => {
   try {
     await fcm.messaging().send({
       token: subscription.data.token,
       notification: {
-        title: "New activity",
+        title,
         body,
       },
       data,
@@ -169,13 +170,17 @@ const sendFCMNotification = async (
   }
 }
 
-export const send = (subscription: Subscription, data: NotificationData, body?: string) => {
+export const send = (
+  subscription: Subscription,
+  data: NotificationData,
+  content: NotificationContent,
+) => {
   switch (subscription.channel) {
     case Channel.Vapid:
-      return sendVapidNotification(subscription, data, body)
+      return sendVapidNotification(subscription, data, content)
     case Channel.APNS:
-      return sendAPNSNotification(subscription, data, body)
+      return sendAPNSNotification(subscription, data, content)
     case Channel.FCM:
-      return sendFCMNotification(subscription, data, body)
+      return sendFCMNotification(subscription, data, content)
   }
 }

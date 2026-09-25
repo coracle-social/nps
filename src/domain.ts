@@ -18,6 +18,22 @@ export type NotificationData = {
   event?: string
 }
 
+export type NotificationContent = {
+  title: string
+  body?: string
+}
+
+export type Schedule = {
+  id: string
+  subscriptionId: string
+  eventId: string
+  relay: string
+  event?: string
+  title: string
+  body?: string
+  at: number
+}
+
 const MAX_EVENT_BYTES = 3800
 
 const PREVIEW_LENGTH = 120

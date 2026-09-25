@@ -2,7 +2,7 @@
 
 import sqlite3 from "sqlite3"
 import {instrument} from "succinct-async"
-import {parseJson, now} from "@welshman/lib"
+import {parseJson, now, randomId} from "@welshman/lib"
 import {
   SignedEvent,
   getTagValue,
@@ -13,6 +13,7 @@ import {
 } from "@welshman/util"
 import {
   Channel,
+  Schedule,
   VapidSubscription,
   APNSSubscription,
   FCMSubscription,
@@ -23,7 +24,7 @@ if (!process.env.DATA_DIR) throw new Error("DATA_DIR is not defined.")
 
 const db = new sqlite3.Database(process.env.DATA_DIR + "/db")
 
-type Param = number | string | boolean
+type Param = number | string | boolean | null
 
 type Row = Record<string, any>
 
@@ -95,6 +96,24 @@ export const migrate = () =>
           )
         `,
         )
+        await run(
+          `
+          CREATE TABLE IF NOT EXISTS schedule (
+            id TEXT PRIMARY KEY,
+            subscription_id TEXT NOT NULL,
+            event_id TEXT NOT NULL,
+            relay TEXT NOT NULL,
+            event JSON,
+            title TEXT NOT NULL,
+            body TEXT,
+            at NUMBER NOT NULL
+          )
+        `,
+        )
+        await run(`CREATE INDEX IF NOT EXISTS schedule_at ON schedule (at)`)
+        await run(
+          `CREATE INDEX IF NOT EXISTS schedule_target ON schedule (subscription_id, event_id)`,
+        )
         resolve()
       })
     } catch (err) {
@@ -163,7 +182,15 @@ export const getSubscriptionByKey = instrument(
 )
 
 export const deleteSubscription = instrument("database.deleteSubscription", async (key: string) => {
-  return parseSubscription(await get(`DELETE FROM subscription WHERE key = ? RETURNING *`, [key]))
+  const subscription = parseSubscription(
+    await get(`DELETE FROM subscription WHERE key = ? RETURNING *`, [key]),
+  )
+
+  if (subscription) {
+    await run(`DELETE FROM schedule WHERE subscription_id = ?`, [subscription.id])
+  }
+
+  return subscription
 })
 
 export const incrementSubscriptionErrors = instrument(
@@ -179,3 +206,59 @@ export const resetSubscriptionErrors = instrument(
     return await get(`UPDATE subscription SET errors = 0 WHERE key = ?`, [key])
   },
 )
+
+// Schedules
+
+export type ScheduleParams = Omit<Schedule, "id" | "subscriptionId" | "eventId">
+
+const parseSchedule = (row: any): Schedule => ({
+  id: row.id,
+  subscriptionId: row.subscription_id,
+  eventId: row.event_id,
+  relay: row.relay,
+  event: row.event ?? undefined,
+  title: row.title,
+  body: row.body ?? undefined,
+  at: row.at,
+})
+
+export const replaceSchedules = instrument(
+  "database.replaceSchedules",
+  async (subscriptionId: string, eventId: string, schedules: ScheduleParams[]) => {
+    await run(`DELETE FROM schedule WHERE subscription_id = ? AND event_id = ?`, [
+      subscriptionId,
+      eventId,
+    ])
+
+    for (const {relay, event, title, body, at} of schedules) {
+      await run(
+        `INSERT INTO schedule (id, subscription_id, event_id, relay, event, title, body, at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [randomId(), subscriptionId, eventId, relay, event ?? null, title, body ?? null, at],
+      )
+    }
+  },
+)
+
+export const deleteSchedules = instrument(
+  "database.deleteSchedules",
+  async (subscriptionId: string) => {
+    return await run(`DELETE FROM schedule WHERE subscription_id = ?`, [subscriptionId])
+  },
+)
+
+export const deleteSchedule = instrument("database.deleteSchedule", async (id: string) => {
+  return await run(`DELETE FROM schedule WHERE id = ?`, [id])
+})
+
+export const getDueSchedules = instrument("database.getDueSchedules", async (at: number) => {
+  const rows = await all(`SELECT * FROM schedule WHERE at <= ? ORDER BY at`, [at])
+
+  return rows.map(parseSchedule)
+})
+
+export const getNextScheduleAt = instrument("database.getNextScheduleAt", async () => {
+  const row = await get<{at: number | null}>(`SELECT MIN(at) AS at FROM schedule`)
+
+  return row?.at ?? undefined
+})

@@ -6,7 +6,7 @@
 		"dev": "tsx watch src/index.ts",
 		"start": "tsx src/index.ts",
 		"check": "tsc --noEmit && eslint src",
-		"test": "tsx test/domain.ts",
+		"test": "tsx test/domain.ts && tsx test/database.ts",
 		"format": "prettier --write \"{src,test}/**/*.{ts,js,json,html}\""
 	},
 	"dependencies": {

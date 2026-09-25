@@ -162,17 +162,113 @@ app.post("/notify/:id", zValidator("json", notifySchema), async c => {
     console.log(`Processing notification for subscription ${subid}`)
 
     const json = event && JSON.stringify(event)
-    const body = domain.makeNotificationBody(event)
+    const data = domain.makeNotificationData({id, relay, event: json})
 
-    await notifications.send(sub, domain.makeNotificationData({id, relay, event: json}), body)
+    await notifications.send(sub, data, {
+      title: "New activity",
+      body: domain.makeNotificationBody(event),
+    })
   }
 
   return c.json({ok: true})
 })
 
+const scheduleSchema = z.object({
+  id: z.string(),
+  relay: z.string(),
+  event: eventSchema.optional(),
+  notifications: z
+    .array(
+      z.object({
+        at: z.number(),
+        title: z.string(),
+        body: z.string().optional(),
+      }),
+    )
+    .max(20),
+})
+
+app.put("/subscription/:key/schedule", zValidator("json", scheduleSchema), async c => {
+  const sub = await database.getSubscriptionByKey(c.req.param("key"))
+
+  if (!sub) {
+    throw new HTTPException(404)
+  }
+
+  const {id, relay, event, notifications} = c.req.valid("json")
+  const json = event && JSON.stringify(event)
+  const schedules = notifications.map(n => ({...n, relay, event: json}))
+
+  await database.replaceSchedules(sub.id, id, schedules)
+  await armSweep()
+
+  console.log(`Scheduled ${schedules.length} notifications for subscription ${sub.id}`)
+
+  return c.json({ok: true})
+})
+
+app.delete("/subscription/:key/schedule", async c => {
+  const sub = await database.getSubscriptionByKey(c.req.param("key"))
+
+  if (!sub) {
+    throw new HTTPException(404)
+  }
+
+  await database.deleteSchedules(sub.id)
+
+  console.log(`Dropped every scheduled notification for subscription ${sub.id}`)
+
+  return c.json({ok: true})
+})
+
+// A single timer waits for the earliest schedule. Waits are capped at a day since setTimeout can't
+// go past ~24.8 days, and floored at a second so a schedule that isn't quite due can't spin.
+const MAX_SWEEP_DELAY = 86400
+
+let sweepAt = Infinity
+let sweepTimer: NodeJS.Timeout | undefined
+
+// Only ever pulls the timer earlier. A timer left behind by a deleted schedule fires a sweep that
+// finds nothing and arms the timer again.
+const armSweep = async () => {
+  const at = await database.getNextScheduleAt()
+
+  if (at !== undefined && at < sweepAt) {
+    const delay = Math.min(Math.max(at - now(), 1), MAX_SWEEP_DELAY)
+
+    clearTimeout(sweepTimer)
+    sweepAt = now() + delay
+    sweepTimer = setTimeout(sweep, ms(delay))
+  }
+}
+
+// A schedule is dropped before it is sent, so a send that throws loses one notification rather
+// than repeating it every sweep. Only the sweep whose delete lands sends it, so overlapping sweeps
+// can't send it twice.
+const sweep = async () => {
+  sweepAt = Infinity
+
+  for (const schedule of await database.getDueSchedules(now())) {
+    if (!(await database.deleteSchedule(schedule.id))) continue
+
+    const sub = await database.getSubscriptionById(schedule.subscriptionId)
+
+    if (sub) {
+      const {eventId: id, relay, event, title, body} = schedule
+      const data = domain.makeNotificationData({id, relay, event})
+
+      await notifications.send(sub, data, {title, body})
+    }
+  }
+
+  await armSweep()
+}
+
 const port = process.env.PORT || 3000
 
-database.migrate().then(() => {
+database.migrate().then(async () => {
+  await armSweep()
+
   serve({
     fetch: app.fetch,
     port: Number(port),
