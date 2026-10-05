@@ -17,6 +17,10 @@ every schedule the subscription has, and deleting the subscription does the same
 A schedule reaches the device as the `id`, `relay` and `event` a relay-triggered notification
 carries, so a client handles the two the same way.
 
+## Health
+
+`GET /health` returns `{"ok": true}` once the database answers a query, and a 503 when it doesn't.
+
 ## Configuration
 
 - `APN_TOPIC` - the bundle identifier for the app this push server is serving

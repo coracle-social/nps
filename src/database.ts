@@ -64,6 +64,8 @@ async function assertResult<T>(p: T | Promise<T>) {
   return (await p)!
 }
 
+export const ping = () => get("SELECT 1")
+
 // Migrations
 
 const addColumnIfNotExists = async (tableName: string, columnName: string, columnDef: string) => {

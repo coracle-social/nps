@@ -45,6 +45,18 @@ app.onError((err, c) => {
   return c.json({error: "Internal Server Error"}, 500)
 })
 
+app.get("/health", async c => {
+  try {
+    await database.ping()
+  } catch (err: any) {
+    console.error("Health check failed:", err.stack || err)
+
+    return c.json({ok: false}, 503)
+  }
+
+  return c.json({ok: true})
+})
+
 const setupVapidSchema = z.object({
   endpoint: z.string(),
   p256dh: z.string(),
