@@ -1,4 +1,4 @@
-FROM node:20-slim AS dependencies
+FROM node:26-slim AS dependencies
 
 RUN apt-get update && apt-get install -y \
     python3 \
