@@ -1,5 +1,5 @@
 import "dotenv/config"
-import apn from "apn"
+import {Notification, Provider} from "@parse/node-apn"
 import webpush from "web-push"
 import fcm from "firebase-admin"
 import {
@@ -32,7 +32,7 @@ fcm.initializeApp({
   credential: fcm.credential.cert(JSON.parse(process.env.FCM_KEY)),
 })
 
-const apnProvider = new apn.Provider({
+const apnProvider = new Provider({
   production: process.env.APN_PRODUCTION === "true",
   token: {
     key: process.env.APN_KEY,
@@ -86,7 +86,7 @@ const sendAPNSNotification = async (
   data: NotificationData,
   {title, body}: NotificationContent,
 ) => {
-  let notification = new apn.Notification({
+  let notification = new Notification({
     topic: process.env.APN_TOPIC,
     sound: "default",
     badge: 1,
@@ -110,13 +110,13 @@ const sendAPNSNotification = async (
       const reason = failure.response.reason
 
       if (
-        status === "410" ||
+        status === 410 ||
         reason === "Unregistered" ||
         reason === "BadDeviceToken" ||
         reason === "DeviceTokenNotForTopic"
       ) {
         await database.deleteSubscription(subscription.key)
-      } else if (status === "429" || status === "500" || status === "503") {
+      } else if (status === 429 || status === 500 || status === 503) {
         await database.incrementSubscriptionErrors(subscription.key)
       }
     } else if (failure.error) {

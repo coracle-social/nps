@@ -1,4 +1,3 @@
-blockExoticSubdeps: false
 allowBuilds:
   '@firebase/util': false
   esbuild: false

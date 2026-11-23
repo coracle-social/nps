@@ -12,11 +12,11 @@
 	"dependencies": {
 		"@hono/node-server": "^1.19.9",
 		"@hono/zod-validator": "^0.7.6",
+		"@parse/node-apn": "^8.2.0",
 		"@types/web-push": "^3.6.4",
 		"@welshman/content": "^0.10.5",
 		"@welshman/lib": "^0.8.1",
 		"@welshman/util": "^0.8.1",
-		"apn": "^2.2.0",
 		"dotenv": "^17.2.3",
 		"firebase-admin": "^13.6.0",
 		"hono": "^4.11.4",
