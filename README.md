@@ -2,6 +2,8 @@
 
 This is a minimal push notification server intended to receive nostr events as described in [this NIP](https://github.com/nostr-protocol/nips/pull/2194).
 
+Before a relay will push events to us, it verifies that we agreed to receive them, by sending a `GET` to the callback URL with a `challenge` query parameter. `GET /notify/:id` answers with the challenge for subscriptions we issued, and `404`s anything else.
+
 ## Notifications
 
 Relays post to `/notify/:id` with an `id` and a `relay`, and may include the event itself as `event`. It reaches the device as a JSON string under the same name, so a client can render the notification without fetching the event back. An event large enough to push the payload past the 4KB FCM and APNs limit is dropped, and the device gets the `id` and `relay` alone.

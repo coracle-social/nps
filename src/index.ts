@@ -139,6 +139,30 @@ const eventSchema = z.object({
   sig: z.string(),
 })
 
+const challengeSchema = z.string().min(1).max(256)
+
+// Relays ask us to echo a challenge before they accept a subscription, and only ids we minted can answer.
+app.get("/notify/:id", async c => {
+  const challenge = challengeSchema.safeParse(c.req.query("challenge"))
+
+  if (!challenge.success) {
+    throw new HTTPException(400)
+  }
+
+  const subid = c.req.param("id")
+  const sub = await database.getSubscriptionById(subid)
+
+  if (!sub) {
+    throw new HTTPException(404)
+  }
+
+  console.log(`Verified callback for subscription ${subid}`)
+
+  c.header("Cache-Control", "no-store")
+
+  return c.text(challenge.data)
+})
+
 const notifySchema = z.object({
   id: z.string(),
   relay: z.string(),
